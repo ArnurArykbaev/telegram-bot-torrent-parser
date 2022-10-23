@@ -56,5 +56,37 @@ bot.command("info", async (ctx) => {
   console.log(result);
   ctx.reply('' + result.title + "\n" + result.description, {});
 });
+bot.command("tracker", async (ctx) => {
+  console.log(ctx.from);
+  const trackerMessage = `Выберите трекер, который хотите скачать`;
+  ctx.deleteMessage();
+  bot.telegram.sendMessage(ctx.chat.id, trackerMessage, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: "utorrent182",
+            callback_data: "utorrent182",
+          },
+          {
+            text: "BitTorrent612",
+            callback_data: "BitTorrent612",
+          },
+        ],
+      ],
+    },
+  });
+});
+
+bot.action("utorrent182", async (ctx) => {
+  await bot.telegram.sendDocument(ctx.chat.id, {
+    source: "./assets/files/utorrent182.exe",
+  });
+});
+bot.action("BitTorrent612", async (ctx) => {
+  await bot.telegram.sendDocument(ctx.chat.id, {
+    source: "./assets/files/BitTorrent612.exe",
+  });
+});
 
 bot.launch();
