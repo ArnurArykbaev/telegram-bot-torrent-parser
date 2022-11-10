@@ -169,8 +169,9 @@ let scrape = async (search) => {
     let searchRows = Array.from(document.querySelectorAll(["#search-results > table > tbody > tr"]));
     console.log(searchRows);
     let searchArray = [];
-    for(let i = 0; i < searchRows.length; i++) {
-      searchArray.push(document.querySelectorAll(["#search-results > table > tbody > tr"])[i].id)
+    for (let i = 0; i < 8; i++) {
+      const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
+      searchArray.push(messageText);
     }
   console.log(searchArray)
     return searchArray;
@@ -178,6 +179,17 @@ let scrape = async (search) => {
   return searchRes;
 };
 /* scrape function end */
+
+/* response function */
+let toResponse = async (resArray) => {
+  const buttonsArray = resArray.map(el => {
+    return `[Markup.button.callback(${el}, ${el})]`
+  })
+
+
+  return buttonsArray
+}
+/* response function end*/
 
 bot.command("find", async (ctx, next) => {
   console.log(ctx.from);
@@ -237,5 +249,68 @@ bot.command("find", async (ctx, next) => {
     console.log(value, "Получилось"); // Получилось!
   });
 });
+
+/* SCENES func */
+const startWizard = new Composer();
+startWizard.on("text", async (ctx) => {
+  const trackerMessage = `Введите наименование файла, который хотите скачать`;
+  await ctx.reply(trackerMessage);
+  return ctx.wizard.next();
+});
+
+const searchTorrent = new Composer();
+searchTorrent.on("text", async (ctx) => {
+  await ctx.deleteMessage();
+  await ctx.reply(
+    `Начал искать файл с названием ${Object.values(ctx.message)[4]}...`
+  );
+  let res = await scrape(ctx.message.text)
+
+  await ctx.reply(
+    "" + 
+    res
+  );
+  
+  return ctx.wizard.next();
+});
+
+const showBtns = new Composer();
+showBtns.on("text", async (ctx) => {
+  await ctx.reply(ctx.message);
+  await ctx.reply(
+    "Chose:",
+    Markup.inlineKeyboard([
+      [Markup.button.callback("Telegram", "Telegram")],
+      [Markup.button.callback("WhatsApp", "WhatsApp")],
+    ])
+  );
+  return ctx.wizard.next();
+});
+
+const messenger = new Composer();
+messenger.action("Telegram", async (ctx) => {
+  await ctx.reply("right");
+  return ctx.scene.leave();
+});
+messenger.action("WhatsApp", async (ctx) => {
+  await ctx.reply("wrong");
+  return ctx.scene.leave();
+});
+
+/* Scenes declare */
+const menuScene = new Scenes.WizardScene(
+  "sceneWizard",
+  startWizard,
+  searchTorrent,
+  showBtns,
+  messenger
+);
+const stage = new Scenes.Stage([menuScene]);
+
+/* middleware to scenes */
+bot.use(session());
+bot.use(stage.middleware());
+
+bot.command("go", (ctx) => ctx.scene.enter("sceneWizard"));
 
 bot.launch();
