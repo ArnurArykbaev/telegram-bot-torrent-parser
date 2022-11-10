@@ -171,16 +171,26 @@ let scrape = async (search) => {
       document.querySelectorAll(["#search-results > table > tbody > tr"])
     );
     let searchArray = [];
-    for (let i = 0; i < searchRows.length; i++) {
-      searchArray.push(
-        document.querySelectorAll(["#search-results > table > tbody > tr"])[i]
-      );
+    for (let i = 0; i < 8; i++) {
+      const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
+      searchArray.push(messageText);
     }
     return searchArray;
   });
   return searchRes;
 };
 /* scrape function end */
+
+/* response function */
+let toResponse = async (resArray) => {
+  const buttonsArray = resArray.map(el => {
+    return `[Markup.button.callback(${el}, ${el})]`
+  })
+
+
+  return buttonsArray
+}
+/* response function end*/
 
 bot.command("find", async (ctx, next) => {
   console.log(ctx.from);
@@ -200,6 +210,7 @@ startWizard.on("text", async (ctx) => {
   await ctx.reply(trackerMessage);
   return ctx.wizard.next();
 });
+
 const searchTorrent = new Composer();
 searchTorrent.on("text", async (ctx) => {
   await ctx.deleteMessage();
@@ -207,11 +218,17 @@ searchTorrent.on("text", async (ctx) => {
     `Начал искать файл с названием ${Object.values(ctx.message)[4]}...`
   );
   let res = await scrape(ctx.message.text);
-  await ctx.reply("" + res);
+
+  await ctx.reply(
+    "" + 
+    res
+  );
+  
   return ctx.wizard.next();
 });
-const lastName = new Composer();
-lastName.on("text", async (ctx) => {
+
+const showBtns = new Composer();
+showBtns.on("text", async (ctx) => {
   await ctx.reply(ctx.message);
   await ctx.reply(
     "Chose:",
@@ -238,7 +255,7 @@ const menuScene = new Scenes.WizardScene(
   "sceneWizard",
   startWizard,
   searchTorrent,
-  lastName,
+  showBtns,
   messenger
 );
 const stage = new Scenes.Stage([menuScene]);
