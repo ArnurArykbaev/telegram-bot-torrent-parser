@@ -217,7 +217,7 @@ searchTorrent.on("text", async (ctx) => {
   await ctx.reply(
     `Начал искать файл с названием ${Object.values(ctx.message)[4]}...`
   );
-  let res = await scrape(ctx.message.text);
+  let res = await scrape(ctx.message.text)
 
   await ctx.reply(
     "" + 
