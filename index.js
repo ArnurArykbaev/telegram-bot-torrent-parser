@@ -166,14 +166,16 @@ let scrape = async (search) => {
   await page.click("#search-submit");
   await page.waitForSelector("#search-results");
   const searchRes = await page.evaluate(() => {
-/*     document.querySelector(["#search-results > table > tbody > #trs-tr-6246797 > td.t-title-col > div.t-title > a"] */
-    let searchRows = Array.from(document.querySelectorAll(["#search-results > table > tbody > tr"]));
-    console.log(searchRows);
+    /*     document.querySelector(["#search-results > table > tbody > #trs-tr-6246797 > td.t-title-col > div.t-title > a"] */
+    let searchRows = Array.from(
+      document.querySelectorAll(["#search-results > table > tbody > tr"])
+    );
     let searchArray = [];
-    for(let i = 0; i < searchRows.length; i++) {
-      searchArray.push(document.querySelectorAll(["#search-results > table > tbody > tr"])[i].id)
+    for (let i = 0; i < searchRows.length; i++) {
+      searchArray.push(
+        document.querySelectorAll(["#search-results > table > tbody > tr"])[i]
+      );
     }
-  console.log(searchArray)
     return searchArray;
   });
   return searchRes;
