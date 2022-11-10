@@ -130,6 +130,55 @@ bot.action("BitTorrent612", async (ctx) => {
   });
 });
 
+/* scrape function */
+let scrape = async (search) => {
+  const browser = await puppeteer.launch({ headless: false });
+  const page = await browser.newPage();
+  const escapeXpathString = (str) => {
+    const splitedQuotes = str.replace(/'/g, `', "'", '`);
+    return `concat('${splitedQuotes}', '')`;
+  };
+  const clickByText = async (page, text) => {
+    const escapedText = escapeXpathString(text);
+    const linkHandlers = await page.$x(`//*[contains(text(), ${escapedText})]`);
+    if (linkHandlers.length > 0) {
+      await linkHandlers[0].click();
+    } else {
+      throw new Error(`Link not found: ${text}`);
+    }
+  };
+
+  await page.goto(process.env.RUTRACKER_SITE);
+  await clickByText(page, "Вход");
+  await page.waitForSelector("#top-login-box");
+  await page.type("#top-login-uname", process.env.RUTRACKER_SITE_USER);
+  await page.type("#top-login-pwd", process.env.RUTRACKER_SITE_PWD);
+  await page.click("#top-login-btn");
+  await page.waitForSelector("#logged-in-username");
+  const entryBtn = await page.evaluate(() => {
+    let title = document.querySelector(["#logged-in-username"]).innerText;
+    return title;
+  });
+  console.log(entryBtn, "authenticated");
+  console.log(search, "searchText");
+  await page.type("#search-text", search);
+  await page.click("#search-submit");
+  await page.waitForSelector("#search-results");
+  const searchRes = await page.evaluate(() => {
+/*     document.querySelector(["#search-results > table > tbody > #trs-tr-6246797 > td.t-title-col > div.t-title > a"] */
+    let searchRows = Array.from(document.querySelectorAll(["#search-results > table > tbody > tr"]));
+    console.log(searchRows);
+    let searchArray = [];
+    for(let i = 0; i < searchRows.length; i++) {
+      searchArray.push(document.querySelectorAll(["#search-results > table > tbody > tr"])[i].id)
+    }
+  console.log(searchArray)
+    return searchArray;
+  });
+  return searchRes;
+};
+/* scrape function end */
+
 bot.command("find", async (ctx, next) => {
   console.log(ctx.from);
   const trackerMessage = `Введите наименование файла, который хотите скачать`;
