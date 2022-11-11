@@ -166,7 +166,7 @@ let scrape = async (search) => {
   await page.click("#search-submit");
   await page.waitForSelector("#search-results");
   const searchRes = await page.evaluate(() => {
-    /*     document.querySelector(["#search-results > table > tbody > #trs-tr-6246797 > td.t-title-col > div.t-title > a"] */
+    /*     document.querySelector(["#search-results > table > tbody > #trs-tr-6253797 > td.t-title-col > div.t-title > a"] */
     let searchRows = Array.from(
       document.querySelectorAll(["#search-results > table > tbody > tr"])
     );
@@ -184,7 +184,10 @@ let scrape = async (search) => {
 /* response function */
 let toResponse = async (resArray) => {
   const buttonsArray = resArray.map(el => {
-    return `[Markup.button.callback(${el}, ${el})]`
+    if(el.length > 34) {
+      const resEl = '' + el.substring(0, 34)
+      return resEl
+    } else return el
   })
 
 
@@ -218,10 +221,9 @@ searchTorrent.on("text", async (ctx) => {
     `Начал искать файл с названием ${Object.values(ctx.message)[4]}...`
   );
   let res = await scrape(ctx.message.text)
-
-  await ctx.reply(
-    "" + 
-    res
+  const arrayRes = await toResponse(res)
+  await ctx.reply('test',
+    Markup.inlineKeyboard(arrayRes.map(button => [Markup.button.callback(button, button)]))
   );
   
   return ctx.wizard.next();
