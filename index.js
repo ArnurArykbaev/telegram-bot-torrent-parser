@@ -170,12 +170,18 @@ let scrape = async (search) => {
     let searchRows = Array.from(
       document.querySelectorAll(["#search-results > table > tbody > tr"])
     );
-    let searchArray = [];
-    for (let i = 0; i < 8; i++) {
-      const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
-      searchArray.push(messageText);
+    let emptyRes = document.querySelector(["#search-results > table > tbody > tr > td"])
+    if(typeof emptyRes.innerText === 'string' && emptyRes.innerText === 'Не найдено') {
+      emptyRes = emptyRes.innerText
+      return emptyRes
+    } else {
+      let searchArray = [];
+      for (let i = 0; i < 8; i++) {
+        const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
+        searchArray.push(messageText);
+      }
+      return searchArray;
     }
-    return searchArray;
   });
   return searchRes;
 };
@@ -189,17 +195,64 @@ let toResponse = async (resArray) => {
       return resEl
     } else return el
   })
+  arrayResGenelral = buttonsArray
 
 
   return buttonsArray
 }
 /* response function end*/
 
+/* getFile function */
+let getFile = async (search) => {
+  const browser = await puppeteer.launch({ headless: false });
+  const page = await browser.newPage();
+  const fs = require('fs');
+  const https = require('https');
+  const escapeXpathString = (str) => {
+    const splitedQuotes = str.replace(/'/g, `', "'", '`);
+    return `concat('${splitedQuotes}', '')`;
+  };
+  const clickByText = async (page, text) => {
+    const escapedText = escapeXpathString(text);
+    const linkHandlers = await page.$x(`//*[contains(text(), ${escapedText})]`);
+    if (linkHandlers.length > 0) {
+      await linkHandlers[0].click();
+    } else {
+      console.log('errortext ' + text)
+      throw new Error(`Link not found: ${text}`);
+    }
+  };
+
+  await page.goto(process.env.RUTRACKER_SITE);
+  await clickByText(page, "Вход");
+  await page.waitForSelector("#top-login-box");
+  await page.type("#top-login-uname", process.env.RUTRACKER_SITE_USER);
+  await page.type("#top-login-pwd", process.env.RUTRACKER_SITE_PWD);
+  await page.click("#top-login-btn");
+  await page.waitForSelector("#logged-in-username");
+  const entryBtn = await page.evaluate(() => {
+    let title = document.querySelector(["#logged-in-username"]).innerText;
+    return title;
+  });
+  console.log(entryBtn, "authenticated");
+  console.log(search, "searchText");
+  await page.type("#search-text", search);
+  await page.click("#search-submit");
+  await page.waitForSelector("#search-results");
+  await page.click("#search-results > table > tbody > tr > td.t-title-col > .t-title > a");
+  await page.waitForSelector(".dl-link");
+  const torrentUrl = await page.$eval('.dl-link', torrent => torrent.href);
+  return torrentUrl
+};
+/* getFile function end */
+
+let arrayResGenelral 
+
 bot.command("find", async (ctx, next) => {
   console.log(ctx.from);
   const trackerMessage = `Введите наименование файла, который хотите скачать`;
   ctx.deleteMessage();
-  bot.telegram.sendMessage(ctx.chat.id, trackerMessage, {});
+  bot.telegram.sendMessage(ctx.chat.id, trackerMessage, {})
   bot.on("text", (ctx) => ctx.reply(ctx.message));
   scrape().then((value) => {
     console.log(value, "Получилось"); // Получилось!
@@ -221,12 +274,25 @@ searchTorrent.on("text", async (ctx) => {
     `Начал искать файл с названием ${Object.values(ctx.message)[4]}...`
   );
   let res = await scrape(ctx.message.text)
-  const arrayRes = await toResponse(res)
-  await ctx.reply('test',
-    Markup.inlineKeyboard(arrayRes.map(button => [Markup.button.callback(button, button)]))
-  );
-  
+
+  if(typeof res === 'string') {
+    await ctx.reply('' + res)
+  } else {  
+    const arrayRes = await toResponse(res)
+    await ctx.reply('Выберите файл из списка',
+      Markup.inlineKeyboard(arrayRes.map(button => Markup.button.callback(button, button)), {columns: 1})
+    );
+  }
+
   return ctx.wizard.next();
+});
+
+const searchTorrentAction = new Composer();
+searchTorrentAction.action(/.+/, async (ctx) => {
+  await ctx.deleteMessage();
+  let res = await getFile(ctx.match.input)
+  await ctx.reply('' + res);
+  return ctx.scene.leave();
 });
 
 const showBtns = new Composer();
@@ -257,6 +323,7 @@ const menuScene = new Scenes.WizardScene(
   "sceneWizard",
   startWizard,
   searchTorrent,
+  searchTorrentAction,
   showBtns,
   messenger
 );
