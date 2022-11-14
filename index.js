@@ -6,6 +6,7 @@ const port = process.env.PORT || 3000;
 const osmosis = require("osmosis");
 const puppeteer = require("puppeteer");
 const fs = require("fs");
+const https = require('https');
 
 expressApp.use(express.static("static"));
 expressApp.use(express.json());
@@ -87,7 +88,7 @@ function getOpenGraphMeta() {
 
 bot.command("start", (ctx) => {
   console.log(ctx.from);
-  bot.telegram.sendMessage(ctx.chat.id, "Привет, Танечка <3", {});
+  bot.telegram.sendMessage(ctx.chat.id, "Приветствую, тут можно получить ссылку на скачивание торрент файлов", {});
 });
 
 bot.command("info", async (ctx) => {
@@ -163,19 +164,31 @@ let scrape = async (search) => {
   console.log(search, "searchText");
   await page.type("#search-text", search);
   await page.click("#search-submit");
-  await page.waitForSelector("#search-results");
+  console.log('search-submit 1')
+  await page.waitForSelector("#tor-tbl");
+  console.log('searchRes 1')
   const searchRes = await page.evaluate(() => {
-/*     document.querySelector(["#search-results > table > tbody > #trs-tr-6246797 > td.t-title-col > div.t-title > a"] */
-    let searchRows = Array.from(document.querySelectorAll(["#search-results > table > tbody > tr"]));
-    console.log(searchRows);
-    let searchArray = [];
-    for (let i = 0; i < 8; i++) {
-      const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
-      searchArray.push(messageText);
+    /*     document.querySelector(["#search-results > table > tbody > #trs-tr-6253797 > td.t-title-col > div.t-title > a"] */
+    let searchRows = Array.from(
+      document.querySelectorAll(["#search-results > table > tbody > tr"])
+    );
+    let emptyRes = document.querySelector(["#search-results > table > tbody > tr > td"])
+    if(typeof emptyRes.innerText === 'string' && emptyRes.innerText === 'Не найдено') {
+      console.log('EMPTY')
+      emptyRes = emptyRes.innerText
+      return emptyRes
+    } else {
+      let searchArray = [];
+      console.log('NOTEMPTY')
+      for (let i = 0; i < 8; i++) {
+        const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
+        searchArray.push(messageText);
+      }
+      return searchArray;
     }
-  console.log(searchArray)
-    return searchArray;
   });
+  console.log('searchRes 1-2')
+  await browser.close();
   return searchRes;
 };
 /* scrape function end */
@@ -183,68 +196,87 @@ let scrape = async (search) => {
 /* response function */
 let toResponse = async (resArray) => {
   const buttonsArray = resArray.map(el => {
-    return `[Markup.button.callback(${el}, ${el})]`
+    if(el.length > 34) {
+      const resEl = '' + el.substring(0, 34)
+      return resEl
+    } else return el
   })
+  arrayResGenelral = buttonsArray
 
 
   return buttonsArray
 }
 /* response function end*/
 
+/* getFile function */
+let getFile = async (search, index) => {
+  const browser = await puppeteer.launch({ headless: false });
+  const page = await browser.newPage();
+  const fs = require('fs');
+  const https = require('https');
+  const escapeXpathString = (str) => {
+    const splitedQuotes = str.replace(/'/g, `', "'", '`)
+    return `concat('${splitedQuotes}', '')`;
+  };
+  const clickByText = async (page, text) => {
+    const escapedText = escapeXpathString(text);
+    const linkHandlers = await page.$x(`//*[contains(text(), ${escapedText})]`);
+    if (linkHandlers.length > 0) {
+      await linkHandlers[0].click()
+    } else {
+      console.log('errortext ' + text)
+    }
+  };
+
+  await page.goto(process.env.RUTRACKER_SITE);
+  await clickByText(page, "Вход");
+  await page.waitForSelector("#top-login-box");
+  await page.type("#top-login-uname", process.env.RUTRACKER_SITE_USER);
+  await page.type("#top-login-pwd", process.env.RUTRACKER_SITE_PWD);
+  await page.click("#top-login-btn");
+  await page.waitForSelector("#logged-in-username");
+  const entryBtn = await page.evaluate(() => {
+    let title = document.querySelector(["#logged-in-username"]).innerText;
+    return title;
+  });
+  console.log(entryBtn, "authenticated");
+  console.log(search, "searchText");
+  await page.type("#search-text", search)
+  await page.click("#search-submit")
+  console.log('search-submit 2')
+  await page.waitForSelector("#tor-tbl")
+  // await page.click("#search-results > table > tbody > tr > td.t-title-col > .t-title");
+  console.log('searchRes 2')
+  const searchRes = await page.evaluate((index) => { 
+    let searchArray = []
+    for (let i = 0; i < 8; i++) {
+      const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title > a"])[i].dataset.topic_id
+      searchArray.push(messageText)
+    }
+    return searchArray
+  });
+  console.log('searchRes 2-2')
+  console.log(searchRes[index], 'RESULT!')
+  await page.waitForXPath(`//a[@data-topic_id="${searchRes[index]}"]`, { visible: true } )
+  await page.click(`[data-topic_id="${searchRes[index]}"]`)
+  console.log(searchRes[index], 'data-topic_id clicked!')
+  await page.waitForSelector(".dl-link");
+  const torrentUrl = await page.$eval('.dl-link', torrent => torrent.href)
+  await browser.close();
+  return torrentUrl
+};
+/* getFile function end */
+
+let arrayResGenelral 
+let firstSearch
+let firstIndex
+
 bot.command("find", async (ctx, next) => {
   console.log(ctx.from);
   const trackerMessage = `Введите наименование файла, который хотите скачать`;
   ctx.deleteMessage();
-  bot.telegram.sendMessage(ctx.chat.id, trackerMessage, {});
-  await next();
-  bot.on("text", (ctx) => ctx.reply(ctx.message));
-  let scrape = async () => {
-    const browser = await puppeteer.launch({ headless: false });
-    const page = await browser.newPage();
-
-    const escapeXpathString = (str) => {
-      const splitedQuotes = str.replace(/'/g, `', "'", '`);
-      return `concat('${splitedQuotes}', '')`;
-    };
-    const clickByText = async (page, text) => {
-      const escapedText = escapeXpathString(text);
-      const linkHandlers = await page.$x(
-        `//*[contains(text(), ${escapedText})]`
-      );
-
-      if (linkHandlers.length > 0) {
-        await linkHandlers[0].click();
-      } else {
-        throw new Error(`Link not found: ${text}`);
-      }
-    };
-
-    await page.goto(process.env.RUTRACKER_SITE);
-
-    const result = await page.evaluate(() => {
-      let title = document.querySelectorAll(["div table tbody tr td div a"])[1];
-
-      return title.innerText;
-    });
-    console.log(result);
-
-    await clickByText(page, "Вход");
-
-    await page.waitForSelector("#top-login-box");
-
-    const entryBtn = await page.evaluate(() => {
-      let title = document.querySelector(["#top-login-btn"]).value;
-      return title;
-    });
-    console.log(entryBtn, "here");
-    /*     
-    await page.type('#top-login-uname', process.env.RUTRACKER_SITE_USER)
-    await page.type('#top-login-pwd', process.env.RUTRACKER_SITE_PWD) */
-
-    browser.close();
-    return entryBtn;
-  };
-
+  bot.telegram.sendMessage(ctx.chat.id, trackerMessage, {})
+  bot.on("text", (ctx) => ctx.reply(ctx.message))
   scrape().then((value) => {
     console.log(value, "Получилось"); // Получилось!
   });
@@ -264,46 +296,36 @@ searchTorrent.on("text", async (ctx) => {
   await ctx.reply(
     `Начал искать файл с названием ${Object.values(ctx.message)[4]}...`
   );
+  firstSearch = ctx.message.text
   let res = await scrape(ctx.message.text)
 
-  await ctx.reply(
-    "" + 
-    res
-  );
-  
+  if(typeof res === 'string') {
+    await ctx.reply('' + res + '! Попробуйте другой запрос')
+  } else {  
+    const arrayRes = await toResponse(res)
+    await ctx.reply('Выберите файл из списка',
+      Markup.inlineKeyboard(arrayRes.map((button, id) => Markup.button.callback(button, id)), {columns: 1})
+    );
+  }
+
   return ctx.wizard.next();
 });
 
-const showBtns = new Composer();
-showBtns.on("text", async (ctx) => {
-  await ctx.reply(ctx.message);
-  await ctx.reply(
-    "Chose:",
-    Markup.inlineKeyboard([
-      [Markup.button.callback("Telegram", "Telegram")],
-      [Markup.button.callback("WhatsApp", "WhatsApp")],
-    ])
-  );
-  return ctx.wizard.next();
+const searchTorrentAction = new Composer();
+searchTorrentAction.action(/.+/, async (ctx) => {
+  await ctx.deleteMessage();
+  let res = await getFile(firstSearch, ctx.match.input)
+  await ctx.reply('' + res);
+  return ctx.scene.leave();
 });
 
-const messenger = new Composer();
-messenger.action("Telegram", async (ctx) => {
-  await ctx.reply("right");
-  return ctx.scene.leave();
-});
-messenger.action("WhatsApp", async (ctx) => {
-  await ctx.reply("wrong");
-  return ctx.scene.leave();
-});
 
 /* Scenes declare */
 const menuScene = new Scenes.WizardScene(
   "sceneWizard",
   startWizard,
   searchTorrent,
-  showBtns,
-  messenger
+  searchTorrentAction,
 );
 const stage = new Scenes.Stage([menuScene]);
 
