@@ -168,24 +168,16 @@ let scrape = async (search) => {
   await page.waitForSelector("#tor-tbl");
   console.log('searchRes 1')
   const searchRes = await page.evaluate(() => {
-    /*     document.querySelector(["#search-results > table > tbody > #trs-tr-6253797 > td.t-title-col > div.t-title > a"] */
+    /*     document.querySelector(["#search-results > table > tbody > #trs-tr-6246797 > td.t-title-col > div.t-title > a"] */
     let searchRows = Array.from(
       document.querySelectorAll(["#search-results > table > tbody > tr"])
     );
-    let emptyRes = document.querySelector(["#search-results > table > tbody > tr > td"])
-    if(typeof emptyRes.innerText === 'string' && emptyRes.innerText === 'Не найдено') {
-      console.log('EMPTY')
-      emptyRes = emptyRes.innerText
-      return emptyRes
-    } else {
-      let searchArray = [];
-      console.log('NOTEMPTY')
-      for (let i = 0; i < 8; i++) {
-        const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
-        searchArray.push(messageText);
-      }
-      return searchArray;
+    let searchArray = [];
+    for (let i = 0; i < 8; i++) {
+      const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
+      searchArray.push(messageText);
     }
+    return searchArray;
   });
   console.log('searchRes 1-2')
   await browser.close();
@@ -275,8 +267,8 @@ bot.command("find", async (ctx, next) => {
   console.log(ctx.from);
   const trackerMessage = `Введите наименование файла, который хотите скачать`;
   ctx.deleteMessage();
-  bot.telegram.sendMessage(ctx.chat.id, trackerMessage, {})
-  bot.on("text", (ctx) => ctx.reply(ctx.message))
+  bot.telegram.sendMessage(ctx.chat.id, trackerMessage, {});
+  bot.on("text", (ctx) => ctx.reply(ctx.message));
   scrape().then((value) => {
     console.log(value, "Получилось"); // Получилось!
   });
