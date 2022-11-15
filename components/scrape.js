@@ -36,7 +36,8 @@ let scrape = async (search) => {
     await page.focus("#search-text")
     await page.keyboard.type('\n');
     console.log('search-submit 1')
-    await page.waitForSelector("#tor-tbl");
+    await page.waitForSelector("th[title='Сиды']");
+    await page.click("th[title='Сиды']");
     console.log('searchRes 1')
     const searchRes = await page.evaluate(() => {
       /*     document.querySelector(["#search-results > table > tbody > #trs-tr-6253797 > td.t-title-col > div.t-title > a"] */
@@ -51,7 +52,7 @@ let scrape = async (search) => {
       } else {
         let searchArray = [];
         console.log('NOTEMPTY')
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 50; i++) {
           const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
           searchArray.push(messageText);
         }
@@ -69,8 +70,8 @@ let scrape = async (search) => {
   /* response function */
 let sliceLongTitles = async (resArray) => {
   const buttonsArray = resArray.map(el => {
-    if(el.length > 34) {
-      const resEl = '' + el.substring(0, 34)
+    if(el.length > 300) {
+      const resEl = '' + el.substring(0, 300)
       return resEl
     } else return el
   })

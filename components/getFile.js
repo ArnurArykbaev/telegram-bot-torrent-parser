@@ -38,12 +38,12 @@ let getFile = async (search, index, torrentId) => {
     await page.focus("#search-text")
     await page.keyboard.type('\n');
     console.log('search-submit 2')
-    await page.waitForSelector("#tor-tbl")
-    // await page.click("#search-results > table > tbody > tr > td.t-title-col > .t-title");
+    await page.waitForSelector("th[title='Сиды']");
+    await page.click("th[title='Сиды']");
     console.log('searchRes 2')
     const searchRes = await page.evaluate((index) => { 
       let searchArray = []
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 50; i++) {
         const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title > a"])[i].dataset.topic_id
         searchArray.push(messageText)
       }

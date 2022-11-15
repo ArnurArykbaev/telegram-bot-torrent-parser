@@ -61,7 +61,10 @@ bot.action("BitTorrent612", async (ctx) => {
   });
 });
 
-
+const createButtons = (data) => {
+  const buttons = Markup.inlineKeyboard(data.map((button, id) => Markup.button.callback(button, id)), {columns: 1})
+  return buttons
+}
 
 let firstSearch
 let torrentId
@@ -87,9 +90,7 @@ searchTorrent.on("text", async (ctx) => {
     await ctx.reply('' + res + '! Попробуйте другой запрос');
   } else {  
     const arrayRes = await scrape.sliceLongTitles(res)
-    await ctx.reply('Выберите файл из списка',
-      Markup.inlineKeyboard(arrayRes.map((button, id) => Markup.button.callback(button, id)), {columns: 1})
-    );
+    await ctx.reply('Выберите файл из списка', createButtons(arrayRes));
   }
 
   return ctx.wizard.next();
