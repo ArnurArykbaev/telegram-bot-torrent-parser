@@ -7,6 +7,8 @@ const osmosis = require("osmosis");
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const https = require('https');
+const Downloader = require('./Downloader')
+const { readdir } = require('fs/promises');
 
 expressApp.use(express.static("static"));
 expressApp.use(express.json());
@@ -163,8 +165,9 @@ let scrape = async (search) => {
   });
   console.log(entryBtn, "authenticated");
   console.log(search, "searchText");
-  await page.type("#search-text", search);
-  await page.click("#search-submit");
+  await page.type("#search-text", search)
+  await page.focus("#search-text")
+  await page.keyboard.type('\n');
   console.log('search-submit 1')
   await page.waitForSelector("#tor-tbl");
   console.log('searchRes 1')
@@ -213,6 +216,8 @@ let toResponse = async (resArray) => {
 let getFile = async (search, index) => {
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
+  const path = require('path');
+  const downloadPath = path.resolve('./torrents');
   const fs = require('fs');
   const https = require('https');
   const escapeXpathString = (str) => {
@@ -243,14 +248,15 @@ let getFile = async (search, index) => {
   console.log(entryBtn, "authenticated");
   console.log(search, "searchText");
   await page.type("#search-text", search)
-  await page.click("#search-submit")
+  await page.focus("#search-text")
+  await page.keyboard.type('\n');
   console.log('search-submit 2')
   await page.waitForSelector("#tor-tbl")
   // await page.click("#search-results > table > tbody > tr > td.t-title-col > .t-title");
   console.log('searchRes 2')
   const searchRes = await page.evaluate((index) => { 
     let searchArray = []
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 9; i++) {
       const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title > a"])[i].dataset.topic_id
       searchArray.push(messageText)
     }
@@ -263,25 +269,39 @@ let getFile = async (search, index) => {
   console.log(searchRes[index], 'data-topic_id clicked!')
   await page.waitForSelector(".dl-link");
   const torrentUrl = await page.$eval('.dl-link', torrent => torrent.href)
-  await browser.close();
+
+
+  const client = await page.target().createCDPSession()
+  await client.send('Page.setDownloadBehavior', {
+    behavior: 'allow',
+    downloadPath: downloadPath,
+  })
+  await page.click('a.dl-link')
+  await page.waitForTimeout(1000);
+  torrentId = searchRes[index]
+  await browser.close()
   return torrentUrl
 };
 /* getFile function end */
 
-let arrayResGenelral 
-let firstSearch
-let firstIndex
+let findFile = async (dir, id) => {
+  let matchedFile
 
-bot.command("find", async (ctx, next) => {
-  console.log(ctx.from);
-  const trackerMessage = `Введите наименование файла, который хотите скачать`;
-  ctx.deleteMessage();
-  bot.telegram.sendMessage(ctx.chat.id, trackerMessage, {})
-  bot.on("text", (ctx) => ctx.reply(ctx.message))
-  scrape().then((value) => {
-    console.log(value, "Получилось"); // Получилось!
-  });
-});
+  const files = await readdir(dir);
+
+  for (const file of files) {
+      // Method 3:
+      if (file.includes(id)) {
+        matchedFile = file;
+        console.log(matchedFile)
+      }
+  }
+
+  return matchedFile
+}
+
+let firstSearch
+let torrentId
 
 /* SCENES func */
 const startWizard = new Composer();
@@ -316,7 +336,7 @@ const searchTorrentAction = new Composer();
 searchTorrentAction.action(/.+/, async (ctx) => {
   await ctx.deleteMessage();
   let res = await getFile(firstSearch, ctx.match.input)
-  await ctx.reply('' + res);
+  await ctx.replyWithDocument({ source: './torrents/' + await findFile('./torrents', torrentId) });
   return ctx.scene.leave();
 });
 
@@ -324,7 +344,6 @@ searchTorrentAction.action(/.+/, async (ctx) => {
 /* Scenes declare */
 const menuScene = new Scenes.WizardScene(
   "sceneWizard",
-  startWizard,
   searchTorrent,
   searchTorrentAction,
 );
@@ -334,6 +353,6 @@ const stage = new Scenes.Stage([menuScene]);
 bot.use(session());
 bot.use(stage.middleware());
 
-bot.command("go", (ctx) => ctx.scene.enter("sceneWizard"));
+bot.on("text", (ctx) => ctx.scene.enter("sceneWizard"));
 
 bot.launch();
