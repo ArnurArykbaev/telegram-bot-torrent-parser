@@ -17,7 +17,8 @@
     "osmosis": "^1.1.10",
     "puppeteer": "^19.1.0",
     "telegraf": "^4.10.0",
-    "telegraf-better-stage": "^1.0.1"
+    "telegraf-better-stage": "^1.0.1",
+    "telegraf-pagination": "^1.4.0"
   },
   "devDependencies": {
     "@types/node-telegram-bot-api": "^0.57.5",

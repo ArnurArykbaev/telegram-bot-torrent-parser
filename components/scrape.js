@@ -52,9 +52,25 @@ let scrape = async (search) => {
       } else {
         let searchArray = [];
         console.log('NOTEMPTY')
-        for (let i = 0; i < 50; i++) {
-          const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
-          searchArray.push(messageText);
+        let pageElement = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])
+        for (let i = 0; i < pageElement.length; i++) {
+          if(pageElement[i] === undefined) {
+            let obj = {
+              title: null,
+              id: null,
+            }
+            obj.title = 'element'
+            obj.id = i + 1
+            searchArray.push(obj);
+          } else {
+            let obj = {
+              title: null,
+              id: null,
+            }
+            obj.title = pageElement[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
+            obj.id = i + 1
+            searchArray.push(obj);
+          }
         }
         return searchArray;
       }

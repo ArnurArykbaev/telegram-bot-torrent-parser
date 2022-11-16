@@ -3,7 +3,8 @@ const path = require("path");
 const { readdir } = require('fs/promises');
 
 /* getFile function */
-let getFile = async (search, index, torrentId) => {
+let getFile = async (search, index, torrentId, third) => {
+  console.log('THIRD', third)
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
     const downloadPath = path.resolve('././torrents');
@@ -43,7 +44,8 @@ let getFile = async (search, index, torrentId) => {
     console.log('searchRes 2')
     const searchRes = await page.evaluate((index) => { 
       let searchArray = []
-      for (let i = 0; i < 50; i++) {
+      let pageElement = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])
+      for (let i = 0; i < pageElement.length; i++) {
         const messageText = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title > a"])[i].dataset.topic_id
         searchArray.push(messageText)
       }
@@ -64,7 +66,7 @@ let getFile = async (search, index, torrentId) => {
       downloadPath: downloadPath,
     })
     await page.click('a.dl-link')
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
     torrentId = searchRes[index]
     await browser.close()
     return torrentId
