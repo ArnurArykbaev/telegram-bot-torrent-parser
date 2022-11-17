@@ -1,11 +1,12 @@
 const puppeteer = require("puppeteer");
 const path = require("path");
 const { readdir } = require('fs/promises');
+const e = require("express");
 
 /* getFile function */
 let getFile = async (search, index, torrentId, third) => {
   console.log('THIRD', third)
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     const downloadPath = path.resolve('././torrents');
     const escapeXpathString = (str) => {
@@ -36,6 +37,7 @@ let getFile = async (search, index, torrentId, third) => {
     console.log(entryBtn, "authenticated");
     console.log(search, "searchText");
     await page.type("#search-text", search)
+    await page.waitForTimeout(500);
     await page.focus("#search-text")
     await page.keyboard.type('\n');
     console.log('search-submit 2')
@@ -56,20 +58,33 @@ let getFile = async (search, index, torrentId, third) => {
     await page.waitForXPath(`//a[@data-topic_id="${searchRes[index]}"]`)
     await page.click(`a[data-topic_id="${searchRes[index]}"]`)
     console.log(searchRes[index], 'data-topic_id clicked!')
-    await page.waitForSelector(".dl-link");
-    const torrentUrl = await page.$eval('.dl-link', torrent => torrent.href)
-  
-  
-    const client = await page.target().createCDPSession()
-    await client.send('Page.setDownloadBehavior', {
-      behavior: 'allow',
-      downloadPath: downloadPath,
-    })
-    await page.click('a.dl-link')
-    await page.waitForTimeout(1500);
-    torrentId = searchRes[index]
-    await browser.close()
-    return torrentId
+
+    await page.waitForSelector("a.med");
+    const torrentStatus = await page.evaluate(() => { 
+      let currentStatus = document.querySelectorAll(["a.med"]).textContent
+      return currentStatus
+    });
+
+    if(torrentStatus === 'закрыто') {
+      torrentId = 'closed';
+      return torrentId
+    } 
+    else {
+      await page.waitForSelector(".dl-link");
+      const torrentUrl = await page.$eval('.dl-link', torrent => torrent.href)
+    
+    
+      const client = await page.target().createCDPSession()
+      await client.send('Page.setDownloadBehavior', {
+        behavior: 'allow',
+        downloadPath: downloadPath,
+      })
+      await page.click('a.dl-link')
+      await page.waitForTimeout(1500);
+      torrentId = searchRes[index]
+      await browser.close()
+      return torrentId
+    }
 };
   /* getFile function end */
 

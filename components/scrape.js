@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 
 /* scrape function */
 let scrape = async (search) => {
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     const escapeXpathString = (str) => {
       const splitedQuotes = str.replace(/'/g, `', "'", '`);
@@ -32,7 +32,8 @@ let scrape = async (search) => {
     });
     console.log(entryBtn, "authenticated");
     console.log(search, "searchText");
-    await page.type("#search-text", search)
+    await page.type("input#search-text", search)
+    await page.waitForTimeout(500);
     await page.focus("#search-text")
     await page.keyboard.type('\n');
     console.log('search-submit 1')

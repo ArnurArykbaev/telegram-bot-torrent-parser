@@ -133,9 +133,15 @@ searchTorrentAction.action(/.+/, async (ctx) => {
   await ctx.deleteMessage();
   console.log(ctx, 'CONTEXT');
   const torrentIndex = await getFile.getFile(firstSearch, ctx.match.input, torrentId)
-  const fileName = await getFile.findFile(torrentIndex)
-  await ctx.replyWithDocument({ source: `./torrents/${fileName}` });
-  return ctx.scene.leave();
+  if(torrentIndex === 'closed') {
+    ctx.reply('Этот торрент уже закрыт. Попробуйте скачать другой')
+    return ctx.scene.leave()
+  } 
+  else {
+    const fileName = await getFile.findFile(torrentIndex)
+    await ctx.replyWithDocument({ source: `./torrents/${fileName}` });
+    return ctx.scene.leave();
+  }
 });
 
 /* Scenes declare */
@@ -153,3 +159,5 @@ bot.use(stage.middleware());
 bot.on("text", (ctx) => ctx.scene.enter("sceneWizard"));
 
 bot.launch();
+
+
