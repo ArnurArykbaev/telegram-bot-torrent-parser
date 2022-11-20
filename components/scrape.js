@@ -67,14 +67,14 @@ let scrape = async (search) => {
               title: null,
               id: null,
             }
-            obj.title = pageEl[i].querySelector(['td.t-title-col > .t-title']).textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
+            obj.title = pageEl[i].querySelector(['td.t-title-col > .t-title > a']).textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
             obj.id = i + 1
             obj.category = ''
             let category =  pageEl[i].querySelectorAll(['td.t-title-col > .t-title > a > .brackets-pair'])
             for(let j = 0; j < category.length; j ++) {
               obj.category = obj.category + category[j].textContent
             }
-            console.log(obj)
+            obj.size = pageEl[i].querySelector(['td.tor-size']).textContent.replace(/[\s↓]/g, '')
             searchArray.push(obj);
           }
         }

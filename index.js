@@ -102,7 +102,7 @@ searchTorrent.on("text", async (ctx) => {
       isButtonsMode: true, // optional. Default value: false. Allows you to display names on buttons (there is support for associative arrays)
       buttonModeOptions: {
         isSimpleArray: false, // optional. Default value: true. Enables/disables support for associative arrays
-        title: (item, i) => i + 1 + ". " + item.title,
+        title: (item, i) => i + 1 + ". " + `[${(item.size)}] ` + item.title,
       },
       isEnabledDeleteButton: true, // optional. Default value: true
       onSelect: (item, index, ctx) => {
