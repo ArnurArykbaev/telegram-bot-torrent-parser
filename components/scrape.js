@@ -47,13 +47,12 @@ let scrape = async (search) => {
       );
       let emptyRes = document.querySelector(["#search-results > table > tbody > tr > td"])
       if(typeof emptyRes.innerText === 'string' && emptyRes.innerText === 'Не найдено') {
-        console.log('EMPTY')
         emptyRes = emptyRes.innerText
         return emptyRes
       } else {
         let searchArray = [];
-        console.log('NOTEMPTY')
         let pageElement = document.querySelectorAll(["#search-results > table > tbody > tr > td.t-title-col > .t-title"])
+        let pageEl = document.querySelectorAll(["#search-results > table > tbody > tr"])
         for (let i = 0; i < pageElement.length; i++) {
           if(pageElement[i] === undefined) {
             let obj = {
@@ -68,8 +67,14 @@ let scrape = async (search) => {
               title: null,
               id: null,
             }
-            obj.title = pageElement[i].textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
+            obj.title = pageEl[i].querySelector(['td.t-title-col > .t-title']).textContent.replace(/[\t]/g, '').replace(/[\n]/g, '')
             obj.id = i + 1
+            obj.category = ''
+            let category =  pageEl[i].querySelectorAll(['td.t-title-col > .t-title > a > .brackets-pair'])
+            for(let j = 0; j < category.length; j ++) {
+              obj.category = obj.category + category[j].textContent
+            }
+            console.log(obj)
             searchArray.push(obj);
           }
         }

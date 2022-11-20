@@ -82,7 +82,7 @@ const searchTorrent = new Composer();
 searchTorrent.on("text", async (ctx) => {
   await ctx.deleteMessage();
   await ctx.reply(
-    `Начал искать файл с названием ${Object.values(ctx.message)[4]}...`
+    `Поиск файла с названием ${Object.values(ctx.message)[4]}...`
   );
   firstSearch = ctx.message.text
   let res = await scrape.scrape(ctx.message.text)
@@ -131,8 +131,8 @@ searchTorrent.on("text", async (ctx) => {
 const searchTorrentAction = new Composer();
 searchTorrentAction.action(/.+/, async (ctx) => {
   await ctx.deleteMessage();
-  console.log(ctx, 'CONTEXT');
   const torrentIndex = await getFile.getFile(firstSearch, ctx.match.input, torrentId)
+  console.log(torrentIndex, 'torrentIndex');
   if(torrentIndex === 'closed') {
     ctx.reply('Этот торрент уже закрыт. Попробуйте скачать другой')
     return ctx.scene.leave()
